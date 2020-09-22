@@ -2,7 +2,7 @@ const express = require('express');
 //importa o express, que controlará as rotas,
 //numa variável de mesmo nome
 
-const { v4 } = require('uuid');
+const { v4, validate } = require('uuid');
 //uuid() cria um id único universal
 
 const app = express(); //app recebe express e cria a aplicação
@@ -10,6 +10,36 @@ app.use(express.json()); //diz ao express que vamos receber json
 //use() adiciona uma função pela qual todas as rotas passam
 
 const projects = []; //temporário
+
+function logRequests(request, response, next) {
+  const { method, url } = request;
+  const logLabel = `[${method.toUpperCase()}] ${url}`;
+  //intercepta e exibe as rotas que são chamadas
+  //e os métodos chamados sobre elas
+
+  console.time(logLabel);
+  next();
+  //chama o próximo middleware, de outra forma ele
+  //mantém a aplicação interrompida
+  console.timeEnd(logLabel);
+}
+
+function validateProjectId(request, response, next) {
+  const { id } = request.params;
+
+  if (!validate(id)) {
+    return response.status(400).json({error: 'invalid project id.'})
+  }
+  //se o id for inválido, ele para a app
+  //e não executa os próximos passos
+
+  return next();
+}
+
+app.use(logRequests);
+
+app.use('/projects/:id', validateProjectId);
+//usa o validador do uuid somente em rotas com /:id
 
 app.get('/projects', (request, response) => {
   const { title, owner } = request.query;
